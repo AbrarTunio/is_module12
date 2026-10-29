@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>Intrusion Detection &amp; Firewall – Activity Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Sentinel / watchtower theme — warm amber. Always light. */
+:root{
+  color-scheme:light;
+  --bg:#fcf9f5; --surface:#ffffff; --surface-2:#f6efe7; --border:#eadfd2; --border-2:#dcc9b4; --line:#efe6db;
+  --text:#2c2117; --muted:#766453; --faint:#a3917d;
+  --primary:#b1500f; --primary-dark:#8c3e0b; --primary-soft:#fceadb; --primary-ink:#ffffff; --accent:#0e7c87; --accent-soft:#e0f3f4;
+  --good:#1f7a43; --good-soft:#e5f5ea; --good-border:#a0d6b1; --bad:#bf2d22; --bad-soft:#fcebe8; --bad-border:#edb3ac;
+  --warn:#8a6100; --warn-soft:#fdf3da; --warn-border:#eed89e; --allow:#1f7a43; --deny:#bf2d22; --alert:#c2410c; --alert-soft:#fdeadb;
+  --topbar:rgba(252,249,245,.9);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:light;
+  --bg:#fcf9f5;--surface:#ffffff;--surface-2:#f6efe7;--border:#eadfd2;--border-2:#dcc9b4;--line:#efe6db;--text:#2c2117;--muted:#766453;--faint:#a3917d;
+  --primary:#b1500f;--primary-dark:#8c3e0b;--primary-soft:#fceadb;--primary-ink:#fff;--accent:#0e7c87;--accent-soft:#e0f3f4;
+  --good:#1f7a43;--good-soft:#e5f5ea;--good-border:#a0d6b1;--bad:#bf2d22;--bad-soft:#fcebe8;--bad-border:#edb3ac;
+  --warn:#8a6100;--warn-soft:#fdf3da;--warn-border:#eed89e;--allow:#1f7a43;--deny:#bf2d22;--alert:#c2410c;--alert-soft:#fdeadb;--topbar:rgba(252,249,245,.9);}}
+:root[data-theme="dark"]{color-scheme:light;
+  --bg:#fcf9f5;--surface:#ffffff;--surface-2:#f6efe7;--border:#eadfd2;--border-2:#dcc9b4;--line:#efe6db;--text:#2c2117;--muted:#766453;--faint:#a3917d;
+  --primary:#b1500f;--primary-dark:#8c3e0b;--primary-soft:#fceadb;--primary-ink:#fff;--accent:#0e7c87;--accent-soft:#e0f3f4;
+  --good:#1f7a43;--good-soft:#e5f5ea;--good-border:#a0d6b1;--bad:#bf2d22;--bad-soft:#fcebe8;--bad-border:#edb3ac;
+  --warn:#8a6100;--warn-soft:#fdf3da;--warn-border:#eed89e;--allow:#1f7a43;--deny:#bf2d22;--alert:#c2410c;--alert-soft:#fdeadb;--topbar:rgba(252,249,245,.9);}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 74px);background:#fcf9f5}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:16.5px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--topbar)}
+img,svg{max-width:100%}
+h1,h2,h3,h4{font-family:"Space Grotesk","Inter",system-ui,sans-serif;margin:0 0 .5em;line-height:1.2;font-weight:700;letter-spacing:-.01em}
+h1{font-size:clamp(1.9rem,5vw,2.9rem)}h2{font-size:clamp(1.35rem,3vw,1.75rem)}h3{font-size:1.14rem}h4{font-size:1rem}
+p{margin:0 0 .8em}b,strong{font-weight:600}
+.mono,code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+code{font-size:.85em;background:var(--surface-2);border:1px solid var(--border);padding:.03em .35em;border-radius:5px;word-break:break-word}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{max-width:840px;margin:0 auto;padding:22px 20px 72px}
+.small{font-size:.88rem}.muted{color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px}.row.wrap{flex-wrap:wrap}.between{justify-content:space-between}.end{justify-content:flex-end}.center{justify-content:center}
+.stack>*+*{margin-top:16px}
+
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--topbar);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:840px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;background:none;border:0;padding:0;cursor:pointer;color:var(--text);text-align:left}
+.brand:disabled{cursor:default}
+.brand-ic{width:28px;height:28px;border-radius:8px;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-size:14px;flex:none}
+.brand-t{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:.98rem;line-height:1}
+.brand-t small{display:block;font-weight:400;font-size:.76rem;color:var(--muted);margin-top:2px;font-family:"Inter"}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.tb-steps{font-size:.82rem;color:var(--muted);font-weight:600}.tb-steps b{color:var(--primary)}
+.student{font-size:.84rem;line-height:1.15;text-align:right}.student small{display:block;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:clamp(18px,3.2vw,28px)}
+.bare{padding:2px 0}
+.eyebrow{font-size:.76rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.lead{font-size:1.06rem;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);color:var(--muted)}
+.pill.on{background:var(--primary-soft);border-color:#edc9a7;color:var(--primary)}
+.rail{height:4px;background:var(--surface-2);border-radius:99px;overflow:hidden}.rail>i{display:block;height:100%;background:var(--primary);transition:width .4s ease}
+.btn{appearance:none;border:1px solid var(--primary);border-radius:10px;padding:11px 18px;font-size:.96rem;font-weight:600;cursor:pointer;background:var(--primary);color:var(--primary-ink);display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .18s,border-color .18s}
+.btn:hover{background:var(--primary-dark);border-color:var(--primary-dark)}.btn:active{transform:translateY(1px)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--primary);border-color:var(--border-2)}.btn-ghost:hover{background:var(--primary-soft)}
+.btn-quiet{background:transparent;color:var(--muted);border-color:var(--border)}.btn-quiet:hover{background:var(--surface-2);color:var(--text)}
+.btn-attack{background:var(--alert);border-color:var(--alert);color:#fff}.btn-attack:hover{background:#a3360a;border-color:#a3360a}
+.btn-sm{padding:7px 13px;font-size:.88rem;border-radius:8px}
+.field label{font-weight:600;font-size:.9rem;display:block;margin-bottom:6px}
+.input{font:inherit;padding:11px 13px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);outline:none;width:100%;transition:border .18s}
+.input:focus{border-color:var(--accent)}
+.err{color:var(--bad);font-size:.88rem;font-weight:600;min-height:1.2em;margin-top:6px}
+input[type=range]{width:100%;accent-color:var(--primary);height:26px}
+
+.facts{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:7px}
+.facts li{display:flex;gap:9px;align-items:baseline;font-size:.96rem}.facts li::before{content:"▸";color:var(--accent);font-weight:700}
+.who-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.obj{margin:0;padding:0;list-style:none;display:grid;gap:7px;counter-reset:o}
+.obj li{display:flex;gap:10px;font-size:.96rem}
+.obj li::before{content:counter(o);counter-increment:o;flex:none;width:22px;height:22px;border-radius:6px;background:var(--primary-soft);color:var(--primary);font-size:.78rem;font-weight:700;display:grid;place-items:center}
+.marks{width:100%;border-collapse:collapse;font-size:.92rem}
+.marks th,.marks td{padding:9px 2px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.marks tr:last-child td{border-bottom:0}.marks th{font-weight:600;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+.path{display:grid;gap:10px}
+.pcard{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--surface)}
+.pcard.locked{opacity:.55}
+.pnum{width:30px;height:30px;border-radius:8px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:.95rem;font-family:"Space Grotesk"}
+.pcard.quiz .pnum{background:var(--primary);color:var(--primary-ink)}
+.ptitle{font-weight:600;font-size:1rem}.pmeta{font-size:.82rem;color:var(--muted);margin-top:2px}
+
+.crumbs{font-size:.82rem;color:var(--muted);margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.key{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin-top:14px}.key b{color:var(--primary)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.box{border:1px solid var(--border);border-radius:11px;padding:13px 15px;background:var(--surface-2)}.box h4{color:var(--primary);margin-bottom:3px}
+.defn{display:grid;gap:8px;margin:10px 0}.defn .d{border:1px solid var(--border);border-radius:11px;padding:11px 14px;font-size:.93rem}.defn .d b{color:var(--primary)}
+.warnline{background:var(--warn-soft);border:1px solid var(--warn-border);border-radius:9px;padding:8px 12px;font-size:.88rem;margin-bottom:12px}
+.actwrap{border:1px solid var(--border-2);border-radius:13px;padding:clamp(15px,3vw,22px);margin-top:4px;background:var(--surface)}
+.act-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.act-label{font-size:.76rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.badge{display:none;font-size:.8rem;font-weight:600;color:var(--good);align-items:center;gap:5px}.actwrap.done .badge{display:inline-flex}
+.task{font-weight:600;font-size:.98rem;margin-bottom:14px}
+.hintarea{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-2)}
+.hintbox{background:var(--surface-2);border:1px solid var(--border);padding:9px 13px;border-radius:9px;margin-top:9px;font-size:.92rem;animation:fade .2s}
+.fb{padding:11px 14px;border-radius:9px;margin-top:11px;font-size:.94rem;border:1px solid var(--border);background:var(--surface-2);animation:fade .2s}
+.fb.good{background:var(--good-soft);border-color:var(--good-border);color:#13532f}
+.fb.bad{background:var(--bad-soft);border-color:var(--bad-border);color:#86201a}
+.fb .act-next{margin-top:9px}
+.stepnav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px}
+.dots{display:flex;gap:5px}.dots i{width:7px;height:7px;border-radius:99px;background:var(--border-2);transition:.3s}.dots i.ok{background:var(--accent)}.dots i.on{width:20px;background:var(--primary)}
+.part{margin:18px 0 9px;font-size:.98rem;font-weight:700;color:var(--primary);font-family:"Space Grotesk"}.part:first-child{margin-top:0}
+
+.tasks{display:grid;gap:6px;margin-top:14px}
+.tk{display:flex;gap:9px;align-items:center;font-size:.92rem;font-weight:500;color:var(--muted)}
+.tick{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border-2);display:grid;place-items:center;font-size:.72rem;flex:none;color:transparent;transition:.2s}
+.tk.ok{color:var(--good)}.tk.ok .tick{background:var(--good);border-color:var(--good);color:#fff}
+.ctl label{font-size:.84rem;font-weight:600;display:flex;justify-content:space-between;gap:8px;margin-bottom:2px}.ctl label b{font-family:"JetBrains Mono";color:var(--primary)}
+.toggle{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:.92rem;cursor:pointer;border:1px solid var(--border-2);border-radius:10px;padding:9px 13px;background:var(--surface)}
+.toggle input{display:none}.toggle .sw{width:38px;height:22px;border-radius:999px;background:var(--border-2);position:relative;transition:.2s;flex:none}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}
+.toggle.on .sw{background:var(--good)}.toggle.on .sw::after{left:18px}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{font-size:.9rem;font-weight:600;border:0;background:transparent;color:var(--muted);padding:8px 13px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--primary);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+.meterbox{display:grid;gap:4px;margin:12px 0}.meterbox .mh{display:flex;justify-content:space-between;font-size:.86rem;font-weight:600}.meterbox .mh .v{font-family:"JetBrains Mono"}
+.meter{height:18px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;position:relative}.meter>i{display:block;height:100%;width:0;transition:width .3s,background .3s;background:var(--primary)}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-top:10px}
+.stat{border:1px solid var(--border);border-radius:11px;padding:9px 12px;background:var(--surface)}.stat .k{font-size:.8rem;color:var(--muted);font-weight:600}.stat .v{font-size:1.25rem;font-weight:700;font-family:"JetBrains Mono"}
+.statusline{font-weight:600;border-radius:9px;padding:9px 13px;margin-top:10px;font-size:.95rem}
+.statusline.up{background:var(--good-soft);color:#13532f;border:1px solid var(--good-border)}
+.statusline.down{background:var(--bad-soft);color:#86201a;border:1px solid var(--bad-border)}
+.statusline.warn{background:var(--warn-soft);color:#6f4e00;border:1px solid var(--warn-border)}
+
+/* event/log console */
+.logrow{border:1px solid var(--border-2);border-radius:11px;padding:11px 13px;background:var(--surface);margin-bottom:9px}
+.logrow .ln{font-family:"JetBrains Mono";font-size:.86rem;margin-bottom:8px}
+.logrow .acts{display:flex;gap:8px;flex-wrap:wrap}
+.lbtn{font-size:.88rem;font-weight:600;border:1px solid var(--border-2);background:var(--surface);border-radius:8px;padding:7px 13px;cursor:pointer;color:var(--text)}
+.lbtn:hover{border-color:var(--accent)}
+.logrow.ok{border-color:var(--good-border);background:var(--good-soft)}.logrow.no{border-color:var(--bad-border);background:var(--bad-soft)}
+.logrow .verdict{font-size:.9rem;margin-top:8px}
+
+/* anomaly chart */
+.chartwrap{border:1px solid var(--border);border-radius:11px;background:var(--surface);padding:8px;overflow-x:auto}
+.chartwrap svg{display:block;width:100%;min-width:440px;height:auto}
+.c-norm{fill:none;stroke:var(--accent);stroke-width:3}.c-att{fill:none;stroke:var(--alert);stroke-width:3}
+.s-fa{fill:var(--accent);fill-opacity:.25}.s-miss{fill:var(--alert);fill-opacity:.25}
+.thr{stroke:var(--text);stroke-width:2;stroke-dasharray:6 4}.axis{stroke:var(--border-2);stroke-width:2}
+.lbl{fill:var(--muted);font-size:12px}.lbl.b{fill:var(--text);font-weight:700}
+
+/* sensor map */
+.netmap{display:grid;gap:10px;margin:10px 0}
+.linkslot,.hostrow{display:flex;align-items:center;gap:10px}
+.slotbtn{border:1.5px dashed var(--border-2);background:var(--surface);border-radius:11px;padding:10px 13px;cursor:pointer;font-weight:600;font-size:.9rem;display:flex;align-items:center;gap:8px;transition:.15s;color:var(--text);flex:1}
+.slotbtn:hover{border-color:var(--accent)}
+.slotbtn.set{border-style:solid;border-color:var(--good-border);background:var(--good-soft);color:#13532f}
+.slotbtn .tagnode{font-family:"JetBrains Mono";font-size:.78rem;color:var(--muted)}
+.hosts{display:grid;gap:8px}
+
+/* file integrity table */
+.ftab{width:100%;border-collapse:collapse;font-size:.86rem}
+.ftab th,.ftab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+.ftab th{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em}
+.ftab td.h{font-family:"JetBrains Mono";font-size:.82rem}
+.ftab tr.changed td{background:var(--bad-soft)}
+.ftab .flag{font-weight:700;color:var(--bad)}.ftab .okflag{color:var(--good);font-weight:700}
+
+/* port scan log */
+.conns{display:grid;gap:5px;max-height:220px;overflow:auto;margin:10px 0;padding:2px}
+.conn{font-family:"JetBrains Mono";font-size:.82rem;border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:var(--surface)}
+.conn.scan{border-color:var(--bad-border);background:var(--bad-soft);color:#86201a}
+
+/* firewall rules */
+.rules{display:grid;gap:7px;margin:10px 0}
+.rule{display:flex;align-items:center;gap:10px;border:1px solid var(--border-2);border-radius:10px;padding:9px 12px;background:var(--surface);cursor:pointer;transition:.15s}
+.rule:hover{border-color:var(--accent)}
+.rule.on{border-color:var(--primary);background:var(--primary-soft)}
+.rule .chk{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border-2);display:grid;place-items:center;font-size:.72rem;color:transparent;flex:none}
+.rule.on .chk{background:var(--primary);border-color:var(--primary);color:#fff}
+.rule .act{font-weight:700;font-family:"JetBrains Mono";font-size:.82rem;padding:2px 8px;border-radius:6px}
+.rule .act.allow{background:var(--good-soft);color:var(--allow)}.rule .act.deny{background:var(--bad-soft);color:var(--deny)}
+.rule .desc{font-size:.9rem}.rule.bad-rule.on{border-color:var(--bad);background:var(--bad-soft)}
+.defrule{font-family:"JetBrains Mono";font-size:.82rem;color:var(--muted);border:1px dashed var(--border-2);border-radius:10px;padding:8px 12px;background:var(--surface-2)}
+.ptest{display:grid;gap:6px;margin-top:10px}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:9px;padding:8px 11px;font-family:"JetBrains Mono";font-size:.84rem;background:var(--surface)}
+.prow .res{font-family:"Inter";font-weight:700;font-size:.82rem;padding:2px 9px;border-radius:999px}
+.res.pass{background:var(--good-soft);color:var(--allow)}.res.drop{background:var(--bad-soft);color:var(--deny)}
+.prow.wrong{border-color:var(--bad-border);background:var(--bad-soft)}
+
+/* zones */
+.zonecols{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:10px 0}
+.zonecol{border:1.5px solid var(--border-2);border-radius:12px;padding:10px;min-height:90px;background:var(--surface)}
+.zonecol h4{text-align:center;margin-bottom:6px}
+.zonecol.internet{border-color:#edb3ac;background:var(--bad-soft)}
+.zonecol.dmz{border-color:var(--warn-border);background:var(--warn-soft)}
+.zonecol.internal{border-color:var(--good-border);background:var(--good-soft)}
+.srvlist{display:grid;gap:7px;margin:10px 0}
+.srv{border:1px solid var(--border-2);border-radius:10px;padding:9px 12px;background:var(--surface)}
+.srv .nm{font-weight:600;font-size:.92rem}
+.srv .seg{margin-top:7px}
+.placed{font-size:.8rem;border-radius:7px;padding:4px 8px;margin-top:4px;text-align:center;font-weight:600}
+
+/* choice */
+.cq-top{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted)}.cq-top .rail{flex:1}
+.cq-q{font-size:1.02rem;margin:12px 0}.opts{display:grid;gap:9px}
+.opt{font-size:.96rem;font-weight:500;padding:11px 14px;border-radius:9px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);cursor:pointer;text-align:left;line-height:1.4;transition:.15s}
+.opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-soft)}.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-soft);color:#13532f}.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:#86201a}
+
+.done-head{text-align:center;padding:6px 0 2px}
+.check{width:46px;height:46px;border-radius:50%;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center;font-size:22px;margin:0 auto 10px}
+.take{margin:0;padding:0;list-style:none;display:grid;gap:7px}.take li{display:flex;gap:9px;font-size:.95rem}.take li::before{content:"✓";color:var(--good);font-weight:700}
+
+.qprompt{font-size:1.1rem;margin:12px 0}.qopts{display:grid;gap:9px}
+.qopt{display:flex;gap:11px;align-items:center;text-align:left;font-size:.96rem;padding:11px 13px;border-radius:10px;border:1px solid var(--border-2);background:var(--surface);color:var(--text);cursor:pointer;transition:.15s}
+.qopt:hover:not(:disabled){border-color:var(--accent);background:var(--surface-2)}.qopt:disabled{cursor:default}
+.ltr{width:27px;height:27px;border-radius:7px;background:var(--surface-2);display:grid;place-items:center;font-weight:700;font-size:.85rem;flex:none;border:1px solid var(--border)}
+.qopt.sel{border-color:var(--primary);background:var(--primary-soft)}.qopt.sel .ltr{background:var(--primary);color:#fff;border-color:var(--primary)}
+.qopt.right{border-color:var(--good);background:var(--good-soft)}.qopt.right .ltr{background:var(--good);color:#fff}
+.qopt.wrong{border-color:var(--bad);background:var(--bad-soft)}.qopt.wrong .ltr{background:var(--bad);color:#fff}
+.ring{width:140px;height:140px;border-radius:50%;background:conic-gradient(var(--primary) calc(var(--p)*1%),var(--surface-2) 0);display:grid;place-items:center;margin:0 auto}
+.ring>div{width:112px;height:112px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center;line-height:1}
+.ring b{font-family:"Space Grotesk";font-size:2.3rem;color:var(--primary)}.ring span{display:block;color:var(--muted);font-size:.9rem;margin-top:3px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.kv div{border:1px solid var(--border);border-radius:9px;padding:8px 11px}.kv small{display:block;color:var(--muted);font-size:.8rem}.kv b{font-size:.98rem;font-weight:600;word-break:break-word}
+.status-pass{color:var(--good)}.status-fail{color:var(--bad)}
+.review{margin:0;padding:0;list-style:none;display:grid;gap:9px}.review li{border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:.92rem}.review .yes{color:var(--good);font-weight:600}.review .no{color:var(--bad);font-weight:600}
+.copybox{width:100%;min-height:140px;font-family:"JetBrains Mono";font-size:.82rem;border-radius:10px;border:1px solid var(--border-2);padding:11px;background:var(--surface);color:var(--text);margin-top:10px}
+.foot{text-align:center;color:var(--faint);font-size:.82rem;padding:0 20px 28px}
+.screen{animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.shake{animation:shake .35s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:620px){.two,.who-grid,.kv,.zonecols{grid-template-columns:1fr}.pcard{grid-template-columns:auto 1fr}.pcard .btn{grid-column:1/-1}.tb-steps{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main id="app" class="wrap"></main>
+<footer class="foot">A safe, simulated security console — nothing here touches a real network. Progress is saved in this browser only; on a shared computer, choose “Different student”.</footer>
+
+<script>
+(function(){
+"use strict";
+const rootEl=document.documentElement;
+function forceLight(){ if(rootEl.getAttribute("data-theme")!=="light") rootEl.setAttribute("data-theme","light"); }
+forceLight(); try{ new MutationObserver(forceLight).observe(rootEl,{attributes:true,attributeFilter:["data-theme"]}); }catch(e){}
+
+const KEY="idf-activity-lab-v1", TOTAL=15;
+const app=document.getElementById("app"), topbar=document.getElementById("topbar");
+function fresh(){ return {name:"",roll:"",maxPos:-1,done:{},results:[]}; }
+let S=fresh();
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const v=localStorage.getItem(KEY); if(v){ const o=JSON.parse(v); if(o&&typeof o==="object") S=Object.assign(fresh(),o); } }catch(e){} }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function shake(el){ el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+function block(h){ const d=document.createElement("div"); d.innerHTML=h; return d; }
+function doneCount(){ return Object.keys(S.done).filter(k=>S.done[k]).length; }
+let mode="welcome";
+function erf(x){ const s=Math.sign(x); x=Math.abs(x); const t=1/(1+0.3275911*x); const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x); return s*y; }
+const Phi=z=>0.5*(1+erf(z/Math.SQRT2)), pdf=(x,m,sd)=>Math.exp(-0.5*((x-m)/sd)**2)/(sd*Math.sqrt(2*Math.PI));
+function fnv(str){ let h=0x811c9dc5>>>0; for(const c of str){ h^=c.charCodeAt(0); h=Math.imul(h,16777619)>>>0; } return ("00000000"+h.toString(16)).slice(-8); }
+
+function choiceQuiz(root, cfg){
+  const items=cfg.items; let i=0,first=0,missed=false;
+  const wrap=document.createElement("div"); root.appendChild(wrap);
+  function show(){
+    if(i>=items.length){ wrap.innerHTML=`<div class="fb good">All ${items.length} correct — first try: <b>${first}/${items.length}</b>.</div>`; if(cfg.onDone) cfg.onDone(); return; }
+    const it=items[i]; missed=false; let opts=(it.opts||cfg.options).slice(); if(cfg.shuffle) opts=shuffle(opts);
+    wrap.innerHTML=`<div class="cq-top"><span>${i+1}/${items.length}</span><span class="rail"><i style="width:${i/items.length*100}%"></i></span></div>
+      <div class="cq-q">${it.q}</div><div class="opts">${opts.map((o,k)=>`<button class="opt" data-k="${k}">${o}</button>`).join("")}</div><div class="cqfb" aria-live="polite"></div>`;
+    const fb=wrap.querySelector(".cqfb");
+    wrap.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>{ const o=opts[+b.dataset.k];
+      if(o===it.a){ if(!missed) first++; wrap.querySelectorAll(".opt").forEach(x=>x.disabled=true); b.classList.add("right");
+        fb.innerHTML=`<div class="fb good">${it.why}<div class="act-next"><button class="btn btn-sm">${i+1<items.length?"Next":"Finish"}</button></div></div>`;
+        fb.querySelector("button").addEventListener("click",()=>{ i++; show(); });
+      } else { missed=true; b.classList.add("wrong"); b.disabled=true; shake(b); fb.innerHTML=`<div class="fb bad">${it.hint||cfg.hint||"Try another option."}</div>`; }
+    }));
+  }
+  show();
+}
+function meter(id,label){ return `<div class="meterbox"><div class="mh"><span>${label}</span><span class="v" id="${id}v"></span></div><div class="meter"><i id="${id}"></i></div></div>`; }
+
+/* ============ LESSON 1 — intrusion detection ============ */
+
+/* 1.0 alert console triage */
+function a_console(root, api){
+  const E=[
+    {ln:'user "hiba" login OK after 1 failed attempt', intrusion:false, why:"One typo then success is normal human behaviour."},
+    {ln:'4,812 failed logins for "admin" in 30 seconds', intrusion:true, why:"A brute-force attack — far beyond anything a person does."},
+    {ln:'single connection to web server on port 443', intrusion:false, why:"A normal HTTPS visit."},
+    {ln:'one host connects to ports 21,22,23,25,80,443,3389 in 2s', intrusion:true, why:"A port scan — probing many services to find a way in."},
+    {ln:'nightly backup job reads /var/data as usual', intrusion:false, why:"Expected, scheduled activity that matches the baseline."},
+    {ln:'admin account downloads entire customer DB at 3am from a new country', intrusion:true, why:"Unusual time, volume and location together — a strong anomaly."}
+  ];
+  let i=0,correct=0;
+  root.innerHTML=`<p class="small muted">You’re the analyst at the security console. For each event, decide: <b>normal activity</b> or <b>intrusion</b>?</p><div id="feed"></div><div id="cfb" aria-live="polite"></div>`;
+  const feed=root.querySelector("#feed"), fb=root.querySelector("#cfb");
+  function show(){ if(i>=E.length){ fb.innerHTML=`<div class="fb good">🛰️ Triage complete — ${correct}/${E.length} correct. Intrusion detection is about spotting what doesn’t fit.</div>`; api.complete(); return; }
+    const e=E[i]; feed.innerHTML=`<div class="logrow" id="lr"><div class="ln">⟩ ${esc(e.ln)}</div><div class="acts"><button class="lbtn" data-v="0">✔ Normal</button><button class="lbtn" data-v="1">🚨 Intrusion</button></div><div class="verdict"></div></div>`;
+    const row=feed.querySelector("#lr"), v=row.querySelector(".verdict");
+    row.querySelectorAll(".lbtn").forEach(b=>b.addEventListener("click",()=>{ const guess=b.dataset.v==="1"; const ok=guess===e.intrusion; if(ok) correct++;
+      row.classList.add(ok?"ok":"no"); row.querySelectorAll(".lbtn").forEach(x=>x.disabled=true);
+      v.innerHTML=`<b>${ok?"✔ Correct":"✘ Actually "+(e.intrusion?"an intrusion":"normal")}.</b> ${e.why}<div class="act-next"><button class="btn btn-sm">${i+1<E.length?"Next event":"Finish"}</button></div>`;
+      v.querySelector("button").addEventListener("click",()=>{ i++; show(); });
+    }));
+  }
+  show();
+}
+
+/* 1.1 signature detection — predict catch/miss */
+function a_signature(root, api){
+  const sigs=["<code>UNION SELECT</code> → SQL injection","<code>../../etc/passwd</code> → path traversal","<code>' OR '1'='1</code> → login bypass"];
+  const reqs=[
+    {r:"GET /product?id=5 UNION SELECT password FROM users", caught:true, why:"Matches the UNION SELECT signature — flagged."},
+    {r:"GET /files?name=../../etc/passwd", caught:true, why:"Matches the path-traversal signature — flagged."},
+    {r:"GET /home (a normal page visit)", caught:false, why:"No signature matches, and nothing malicious — correctly allowed.", benign:true},
+    {r:"POST /login  payload exploiting a brand-new, never-seen 0-day flaw", caught:false, why:"⚠️ It IS an attack, but no signature exists yet — a signature IDS MISSES zero-days. This is its key weakness."}
+  ];
+  let i=0,correct=0;
+  root.innerHTML=`<p class="small muted"><b>Signature database:</b></p><div class="defn">${sigs.map(s=>`<div class="d">${s}</div>`).join("")}</div>
+    <p class="small muted">For each incoming request, predict: will the signature IDS <b>catch</b> it or <b>let it through</b>?</p><div id="feed"></div><div id="sfb" aria-live="polite"></div>`;
+  const feed=root.querySelector("#feed"), fb=root.querySelector("#sfb");
+  function show(){ if(i>=reqs.length){ fb.innerHTML=`<div class="fb good">🎯 ${correct}/${reqs.length} predicted correctly. Signatures catch <b>known</b> attacks fast but are blind to new ones.</div>`; api.complete(); return; }
+    const q=reqs[i]; feed.innerHTML=`<div class="logrow" id="lr"><div class="ln">⟩ ${esc(q.r)}</div><div class="acts"><button class="lbtn" data-v="1">🚨 Caught</button><button class="lbtn" data-v="0">➡ Let through</button></div><div class="verdict"></div></div>`;
+    const row=feed.querySelector("#lr"), v=row.querySelector(".verdict");
+    row.querySelectorAll(".lbtn").forEach(b=>b.addEventListener("click",()=>{ const guess=b.dataset.v==="1"; const ok=guess===q.caught; if(ok) correct++;
+      row.classList.add(ok?"ok":"no"); row.querySelectorAll(".lbtn").forEach(x=>x.disabled=true);
+      v.innerHTML=`<b>${ok?"✔ Correct":"✘"}.</b> ${q.why}<div class="act-next"><button class="btn btn-sm">${i+1<reqs.length?"Next":"Finish"}</button></div>`;
+      v.querySelector("button").addEventListener("click",()=>{ i++; show(); });
+    }));
+  }
+  show();
+}
+
+/* 1.2 anomaly threshold tuner */
+function a_anomaly(root, api){
+  const W=560,H=240,x0=38,x1=544,yb=192,yt=28,MN=20,SDn=6,MA=55,SDa=8,PMAX=pdf(0,0,6);
+  const sc=v=>x0+v/80*(x1-x0), yv=p=>yb-p/PMAX*(yb-yt);
+  const line=(m,sd)=>{ let d=""; for(let v=0;v<=80;v+=1){ d+=(v?"L":"M")+sc(v).toFixed(1)+" "+yv(pdf(v,m,sd)).toFixed(1); } return d; };
+  const area=(m,sd,a,b)=>{ if(b<=a) return ""; let d=`M${sc(a).toFixed(1)} ${yb}`; for(let v=a;v<=b;v+=0.5){ d+=`L${sc(v).toFixed(1)} ${yv(pdf(v,m,sd)).toFixed(1)}`; } return d+`L${sc(b).toFixed(1)} ${yb}Z`; };
+  let m1=false,m2=false;
+  root.innerHTML=`<p class="small muted">An anomaly IDS learns a <b>baseline</b> of normal behaviour (here: logins per hour). Anything above the <b>threshold</b> is flagged as an intrusion. Move the threshold to balance catching attacks against false alarms.</p>
+    <div class="chartwrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Normal vs attack activity with a movable threshold">
+      <path id="sfa" class="s-fa"/><path id="smiss" class="s-miss"/>
+      <path class="c-norm" d="${line(MN,SDn)}"/><path class="c-att" d="${line(MA,SDa)}"/>
+      <line class="axis" x1="${x0}" y1="${yb}" x2="${x1}" y2="${yb}"/>
+      <text class="lbl b" x="${sc(MN)}" y="${yt-10}" text-anchor="middle">Normal</text>
+      <text class="lbl b" x="${sc(MA)}" y="${yt-10}" text-anchor="middle">Attack</text>
+      <text class="lbl" x="${x0}" y="${yb+18}">few logins</text><text class="lbl" x="${x1}" y="${yb+18}" text-anchor="end">many logins</text>
+      <line id="thrL" class="thr" y1="${yt-6}" y2="${yb}"/></svg></div>
+    <div class="ctl" style="margin-top:10px"><label>Threshold: flag if logins/hour ≥ <b id="tv">40</b></label><input type="range" id="thr" min="25" max="70" value="40"></div>
+    <div class="stat-row">
+      <div class="stat"><div class="k">Attacks detected</div><div class="v" id="det" style="color:var(--good)"></div></div>
+      <div class="stat"><div class="k">False alarms</div><div class="v" id="fa" style="color:var(--alert)"></div></div>
+    </div>
+    <div class="tasks">
+      <div class="tk" id="t1"><span class="tick">✓</span>Catch at least 95% of attacks</div>
+      <div class="tk" id="t2"><span class="tick">✓</span>Find a balance: over 90% detected AND under 5% false alarms</div>
+    </div>`;
+  const thr=root.querySelector("#thr");
+  function update(){ const t=+thr.value;
+    root.querySelector("#sfa").setAttribute("d",area(MN,SDn,t,80));
+    root.querySelector("#smiss").setAttribute("d",area(MA,SDa,0,t));
+    const L=root.querySelector("#thrL"); L.setAttribute("x1",sc(t)); L.setAttribute("x2",sc(t));
+    root.querySelector("#tv").textContent=t;
+    const det=(1-Phi((t-MA)/SDa))*100, fa=(1-Phi((t-MN)/SDn))*100;
+    root.querySelector("#det").textContent=det.toFixed(1)+"%"; root.querySelector("#fa").textContent=fa.toFixed(1)+"%";
+    if(det>=95&&!m1){ m1=true; root.querySelector("#t1").classList.add("ok"); }
+    if(det>90&&fa<5&&!m2){ m2=true; root.querySelector("#t2").classList.add("ok"); }
+    if(m1&&m2) api.complete();
+  }
+  thr.addEventListener("input",update); update();
+}
+
+/* 1.3 which approach catches it */
+function a_which(root, api){
+  const SIG="Signature", AN="Anomaly", BOTH="Both";
+  choiceQuiz(root,{ options:[SIG,AN,BOTH], shuffle:true,
+    hint:"Signatures catch known patterns. Anomaly catches anything unusual, even new.",
+    items:[
+      {q:"A well-known worm whose exact pattern is in the signature database.", a:SIG, why:"A known signature match — fast and reliable for signature IDS."},
+      {q:"A brand-new zero-day exploit nobody has seen before.", a:AN, why:"No signature exists yet, but it behaves abnormally — only anomaly detection has a chance."},
+      {q:"A user suddenly transferring 100× their normal data volume.", a:AN, why:"No signature for ‘too much data’; it’s a deviation from the baseline."},
+      {q:"A famous SQL-injection string sent in an unusual, never-seen way.", a:BOTH, why:"The known string triggers the signature; the odd behaviour triggers anomaly detection too."},
+      {q:"The weakness of anomaly detection is that…", a:"It raises false alarms on unusual-but-harmless behaviour", opts:["It raises false alarms on unusual-but-harmless behaviour","It can only run at night","It needs no training"], why:"Anything new, even legitimate, can look anomalous — causing false positives."}
+    ], onDone:api.complete });
+}
+
+/* 1.4 base-rate / alert reality */
+function a_baserate(root, api){
+  let m1=false, quizDone=false;
+  root.innerHTML=`<p class="small muted">Even a good detector drowns you in false alarms when real attacks are <b>rare</b>. This detector catches <b>99%</b> of attacks and false-alarms on only <b>2%</b> of normal events. Slide the real-attack rate and watch how trustworthy the alarms are.</p>
+    <div class="ctl"><label>Of all events, how many are real attacks? <b id="brL">5%</b></label><input type="range" id="br" min="1" max="100" value="50"></div>
+    ${meter("prec","Of the alarms raised, how many are REAL attacks")}
+    <div class="stat-row">
+      <div class="stat"><div class="k">Real attacks found</div><div class="v" id="tp" style="color:var(--good)"></div></div>
+      <div class="stat"><div class="k">False alarms</div><div class="v" id="fp" style="color:var(--alert)"></div></div>
+    </div>
+    <div class="statusline up" id="st"></div>
+    <div class="tasks"><div class="tk" id="t1"><span class="tick">✓</span>Set attacks to be rare (1%) and see most alarms turn out false</div></div>
+    <div id="bq" style="margin-top:14px"></div>`;
+  const br=root.querySelector("#br");
+  function chk(){ if(m1&&quizDone) api.complete(); }
+  function update(){ const p=(+br.value)/1000; // 1..100 -> 0.1%..10%
+    root.querySelector("#brL").textContent=(p*100).toFixed(1)+"%";
+    const N=100000, attacks=N*p, normal=N-attacks, tp=attacks*0.99, fp=normal*0.02, prec=tp/(tp+fp)*100;
+    root.querySelector("#prec").style.width=prec+"%"; root.querySelector("#prec").style.background= prec<50?"var(--alert)":"var(--good)";
+    root.querySelector("#precv").textContent=prec.toFixed(0)+"%";
+    root.querySelector("#tp").textContent=Math.round(tp).toLocaleString();
+    root.querySelector("#fp").textContent=Math.round(fp).toLocaleString();
+    const st=root.querySelector("#st");
+    if(prec<50){ st.className="statusline down"; st.innerHTML=`⚠️ Only ${prec.toFixed(0)}% of alarms are real — analysts drown in false positives. This is <b>alert fatigue</b>.`; if((p*100)<=1 && !m1){ m1=true; root.querySelector("#t1").classList.add("ok"); if(!quizDone) buildQ(); } }
+    else { st.className="statusline up"; st.innerHTML=`${prec.toFixed(0)}% of alarms are real — manageable when attacks are common.`; }
+    chk();
+  }
+  let built=false;
+  function buildQ(){ if(built) return; built=true;
+    choiceQuiz(root.querySelector("#bq"),{ items:[{ q:"Why do even accurate IDSs produce mostly false alarms in practice?", opts:["Real attacks are rare, so a small false-alarm rate on many normal events still outnumbers them","Detectors are usually broken","Attackers disable the IDS"], a:"Real attacks are rare, so a small false-alarm rate on many normal events still outnumbers them", why:"This is the base-rate problem — why tuning and alert triage matter so much." }], onDone:()=>{ quizDone=true; chk(); } });
+  }
+  br.addEventListener("input",update); update();
+}
+
+/* ============ LESSON 2 — HIDS / NIDS ============ */
+
+/* 2.0 place the sensors */
+function a_place(root, api){
+  let nids=false, hids=0;
+  root.innerHTML=`<p class="small muted">A <b>NIDS</b> watches traffic on the network link; a <b>HIDS</b> runs on an individual host. Click to deploy sensors where they belong.</p>
+    <div class="netmap">
+      <div class="linkslot"><span class="pill">🌐 Internet → 🧱 Firewall</span></div>
+      <button class="slotbtn" id="link"><span>🔗 Main network link</span><span class="tagnode" id="linktag">click to deploy a sensor</span></button>
+      <div class="pill" style="align-self:flex-start">🔀 Switch</div>
+      <div class="hosts" id="hosts"></div>
+    </div>
+    <div class="statusline warn" id="st">No sensors deployed.</div>
+    <div class="tasks">
+      <div class="tk" id="t1"><span class="tick">✓</span>Deploy a NIDS on the network link</div>
+      <div class="tk" id="t2"><span class="tick">✓</span>Deploy a HIDS on at least one host</div>
+    </div>`;
+  const hosts=root.querySelector("#hosts"), st=root.querySelector("#st");
+  ["🖥️ Web server","🖥️ Database","💻 Workstation"].forEach((h,i)=>{ const b=block(`<button class="slotbtn" data-h="${i}"><span>${h}</span><span class="tagnode">click to deploy a sensor</span></button>`).firstElementChild;
+    b.addEventListener("click",()=>{ if(b.classList.contains("set")) return; b.classList.add("set"); b.querySelector(".tagnode").textContent="🛡️ HIDS deployed"; hids++; root.querySelector("#t2").classList.add("ok"); update(); });
+    hosts.appendChild(b); });
+  root.querySelector("#link").addEventListener("click",function(){ if(nids) return; nids=true; this.classList.add("set"); root.querySelector("#linktag").textContent="🛰️ NIDS deployed"; root.querySelector("#t1").classList.add("ok"); update(); });
+  function update(){ if(nids&&hids>0){ st.className="statusline up"; st.innerHTML="✅ Good coverage — the NIDS watches all traffic on the link, and each HIDS watches inside its host."; api.complete(); } else { st.className="statusline warn"; st.innerHTML=`Deployed: ${nids?"NIDS ✓":"no NIDS"}, ${hids} HIDS.`; } }
+}
+
+/* 2.1 who sees it */
+function a_whosees(root, api){
+  const H="HIDS (on the host)", N="NIDS (on the network)", B="Both";
+  choiceQuiz(root,{ options:[H,N,B], shuffle:true,
+    hint:"HIDS sees inside one host (files, logs, decrypted data). NIDS sees traffic across the network but not host internals or encrypted payloads.",
+    items:[
+      {q:"A system file on the web server is secretly modified.", a:H, why:"Only the HIDS on that host can see file changes."},
+      {q:"One source scans ports across the whole subnet.", a:N, why:"A network-wide pattern — the NIDS sees it; no single host would."},
+      {q:"Malware arrives hidden inside encrypted HTTPS and runs on a host.", a:H, why:"The NIDS can’t read the encrypted payload; the HIDS sees the malware once it acts on the host."},
+      {q:"A flood of traffic crosses the network toward many machines.", a:N, why:"A traffic-level event best seen by the network sensor."},
+      {q:"A failed-then-successful login recorded in the host’s auth log.", a:H, why:"Host log analysis is a HIDS job."},
+      {q:"A famous attack string sent in plain HTTP to a server.", a:B, why:"The NIDS sees it on the wire and the HIDS sees it hit the host."}
+    ], onDone:api.complete });
+}
+
+/* 2.2 file integrity monitor (HIDS) */
+function a_integrity(root, api){
+  const base=[
+    {f:"/bin/login", c:"login-v2.3-official"},
+    {f:"/etc/passwd", c:"root:x:0:0 ... hiba:1001"},
+    {f:"/var/www/index.html", c:"<h1>Welcome</h1>"}
+  ].map(x=>({f:x.f, c:x.c, h:fnv(x.c)}));
+  let tampered=-1, tamperedDone=false, detected=false;
+  root.innerHTML=`<div class="warnline">A HIDS stores a trusted hash (fingerprint) of each important file. If a file changes, its hash changes too — so tampering is caught even if the attacker tried to hide it.</div>
+    <div class="row wrap"><button class="btn btn-sm btn-attack" id="tamper">😈 Attacker secretly alters a file</button><button class="btn btn-sm" id="scan">🛡️ Run HIDS integrity check</button></div>
+    <table class="ftab" style="margin-top:12px"><thead><tr><th>File</th><th>Baseline hash</th><th>Current hash</th><th>Status</th></tr></thead><tbody id="tb"></tbody></table>
+    <div id="ifb" aria-live="polite"></div>
+    <div class="tasks">
+      <div class="tk" id="t1"><span class="tick">✓</span>Let the attacker tamper with a file</div>
+      <div class="tk" id="t2"><span class="tick">✓</span>Run the integrity check and catch the change</div>
+    </div>`;
+  const tb=root.querySelector("#tb"), fb=root.querySelector("#ifb");
+  function cur(i){ return (i===tampered)? fnv(base[i].c+"-HACKED") : base[i].h; }
+  function draw(scanned){ tb.innerHTML=base.map((x,i)=>{ const changed=i===tampered; const ch=cur(i);
+    return `<tr class="${scanned&&changed?"changed":""}"><td class="mono">${x.f}</td><td class="h">${x.h}</td><td class="h">${scanned?ch:"—"}</td><td>${scanned?(changed?'<span class="flag">⚠ MODIFIED</span>':'<span class="okflag">✓ ok</span>'):""}</td></tr>`; }).join(""); }
+  draw(false);
+  root.querySelector("#tamper").addEventListener("click",()=>{ tampered=Math.floor(Math.random()*base.length); tamperedDone=true; root.querySelector("#t1").classList.add("ok"); draw(false); fb.innerHTML=`<div class="fb bad">The attacker changed a file — but which one? It looks identical on the surface. Run the integrity check.</div>`; chk(); });
+  root.querySelector("#scan").addEventListener("click",()=>{ if(tampered<0){ draw(true); fb.innerHTML=`<div class="fb good">All hashes match the baseline — nothing has been tampered with. (Let the attacker strike first to see a detection.)</div>`; return; }
+    draw(true); detected=true; root.querySelector("#t2").classList.add("ok"); fb.innerHTML=`<div class="fb good">🛡️ Caught it! <code>${base[tampered].f}</code>’s hash no longer matches its baseline, so the HIDS flags it as modified.</div>`; chk(); });
+  function chk(){ if(tamperedDone&&detected) api.complete(); }
+}
+
+/* 2.3 port-scan detector (NIDS) */
+function a_portscan(root, api){
+  const log=[]; let flagged=false;
+  root.innerHTML=`<p class="small muted">The NIDS watches connections across the network. A normal user touches one or two services; a port scan touches many ports from one source fast. Generate traffic and let the NIDS judge.</p>
+    <div class="row wrap"><button class="btn btn-sm" id="normal">🙋 Normal user connects</button><button class="btn btn-sm btn-attack" id="scan">😈 Run a port scan</button><button class="btn btn-sm btn-quiet" id="clear">Clear</button></div>
+    <div class="conns" id="conns"></div>
+    <div class="statusline up" id="st">NIDS: traffic looks normal.</div>
+    <div class="tasks"><div class="tk" id="t1"><span class="tick">✓</span>Trigger the NIDS to detect a port scan</div></div>`;
+  const conns=root.querySelector("#conns"), st=root.querySelector("#st");
+  function render(){ conns.innerHTML=log.map(c=>`<div class="conn ${c.scan?"scan":""}">${c.src} → ${c.dst}:${c.port}</div>`).join(""); detect(); }
+  function detect(){ const bySrc={}; log.forEach(c=>{ (bySrc[c.src]=bySrc[c.src]||new Set()).add(c.port); });
+    let scanner=null; Object.keys(bySrc).forEach(s=>{ if(bySrc[s].size>=6) scanner=s; });
+    if(scanner){ log.forEach(c=>{ if(c.src===scanner) c.scan=true; }); st.className="statusline down"; st.innerHTML=`🚨 NIDS ALERT: <b>${scanner}</b> probed ${bySrc[scanner].size} different ports — that’s a port scan.`;
+      conns.querySelectorAll(".conn").forEach((el,i)=>{ if(log[i].scan) el.classList.add("scan"); });
+      if(!flagged){ flagged=true; root.querySelector("#t1").classList.add("ok"); api.complete(); } }
+    else { st.className="statusline up"; st.innerHTML="NIDS: traffic looks normal."; }
+  }
+  root.querySelector("#normal").addEventListener("click",()=>{ const ip="198.51.100."+(Math.floor(Math.random()*90)+10); log.push({src:ip,dst:"10.0.0.5",port:Math.random()<0.5?80:443}); render(); });
+  root.querySelector("#scan").addEventListener("click",()=>{ [21,22,23,25,80,443,3306,3389].forEach(p=>log.push({src:"45.9.88.3",dst:"10.0.0.5",port:p})); render(); });
+  root.querySelector("#clear").addEventListener("click",()=>{ log.length=0; render(); });
+  render();
+}
+
+/* 2.4 correlate alerts */
+function a_correlate(root, api){
+  choiceQuiz(root,{ shuffle:true,
+    items:[
+      {q:"Three low-level alerts arrive: (NIDS) a port scan from an outside IP, then (HIDS) a new admin account on the web server, then (NIDS) that server making a large outbound transfer to an unknown IP. On their own each is minor. Correlated, they most likely show…", a:"A full attack: reconnaissance → compromise → data theft", opts:["A full attack: reconnaissance → compromise → data theft","Three unrelated harmless events","A hardware fault"], why:"Correlating alerts from different sensors reveals the attack story that no single alert shows — the job of a distributed/correlating IDS (SIEM)."},
+      {q:"Why combine HIDS and NIDS alerts in one place?", a:"Each sees only part of the picture; together they reveal the whole attack", opts:["Each sees only part of the picture; together they reveal the whole attack","To use more disk space","Because one of them is always wrong"], why:"HIDS sees host internals, NIDS sees the network — correlation connects the dots."}
+    ], onDone:api.complete });
+}
+
+/* ============ LESSON 3 — firewalls ============ */
+
+/* 3.0 default policy */
+function a_default(root, api){
+  let m1=false,m2=false;
+  root.innerHTML=`<p class="small muted">A firewall’s <b>default policy</b> decides what happens to traffic that no rule mentions. Try both and send some packets.</p>
+    <div class="seg" id="pol" role="group" aria-label="Default policy"><button data-p="allow" class="on">Default: ALLOW all</button><button data-p="deny">Default: DENY all</button></div>
+    <div class="row wrap" style="margin-top:12px"><button class="btn btn-sm" id="web">🙋 Send legit web request</button><button class="btn btn-sm btn-attack" id="atk">😈 Send attacker probe</button></div>
+    <div id="dfb" aria-live="polite"></div>
+    <div class="tasks">
+      <div class="tk" id="t1"><span class="tick">✓</span>See that default-ALLOW lets the attacker straight in</div>
+      <div class="tk" id="t2"><span class="tick">✓</span>Switch to default-DENY and see unlisted traffic blocked</div>
+    </div>`;
+  let policy="allow"; const fb=root.querySelector("#dfb");
+  root.querySelectorAll("#pol button").forEach(b=>b.addEventListener("click",()=>{ policy=b.dataset.p; root.querySelectorAll("#pol button").forEach(x=>x.classList.toggle("on",x===b)); fb.innerHTML=`<div class="fb">Default policy is now <b>${policy==="allow"?"ALLOW all":"DENY all"}</b>. Send some packets.</div>`; }));
+  function send(isAttack){ const pass = policy==="allow"; // no rules defined, so default decides
+    if(isAttack){ if(pass){ m1=true; root.querySelector("#t1").classList.add("ok"); fb.innerHTML=`<div class="fb bad">💥 Attacker probe ALLOWED — with default-allow, anything not explicitly blocked gets in. Dangerous.</div>`; } else { m2=true; root.querySelector("#t2").classList.add("ok"); fb.innerHTML=`<div class="fb good">🛡️ Attacker probe DROPPED — default-deny blocks everything not explicitly permitted. This is the safe default.</div>`; } }
+    else { if(pass) fb.innerHTML=`<div class="fb">Web request allowed (default-allow lets everything through).</div>`; else { m2=true; root.querySelector("#t2").classList.add("ok"); fb.innerHTML=`<div class="fb warn" style="background:var(--warn-soft);border:1px solid var(--warn-border);color:#6f4e00;border-radius:9px;padding:11px 14px;margin-top:11px">Even the legit request was dropped — with default-deny you must now <b>add rules</b> to allow what you need. That’s the next step.</div>`; } }
+    if(m1&&m2) api.complete();
+  }
+  root.querySelector("#web").addEventListener("click",()=>send(false));
+  root.querySelector("#atk").addEventListener("click",()=>send(true));
+}
+
+/* 3.1 firewall rule builder (centerpiece) */
+function a_rules(root, api){
+  const RULES=[
+    {id:"web", act:"allow", desc:"Allow TCP 80,443 to web server — from anywhere", bad:false, match:p=>(p.port===80||p.port===443)&&p.dst==="web"},
+    {id:"sshadm", act:"allow", desc:"Allow TCP 22 (SSH) — only from admin 203.0.113.7", bad:false, match:p=>p.port===22&&p.src==="admin"},
+    {id:"sshany", act:"allow", desc:"Allow TCP 22 (SSH) — from anywhere", bad:true, match:p=>p.port===22},
+    {id:"all", act:"allow", desc:"Allow ALL traffic — from anywhere", bad:true, match:p=>true}
+  ];
+  const PKTS=[
+    {label:"Web visitor → web:443", src:"internet", dst:"web", port:443, expect:true},
+    {label:"Admin → SSH:22", src:"admin", dst:"web", port:22, expect:true},
+    {label:"Attacker → SSH:22", src:"internet", dst:"web", port:22, expect:false},
+    {label:"Attacker → DB:3306", src:"internet", dst:"db", port:3306, expect:false}
+  ];
+  const enabled={};
+  root.innerHTML=`<p class="small muted"><b>Mission:</b> allow web traffic to the web server and SSH only from the admin — and block everything else. Toggle rules on; they’re checked top-to-bottom, with an implicit <b>deny</b> at the end.</p>
+    <div class="rules" id="rules"></div>
+    <div class="defrule">⬇ default: DENY everything not matched above</div>
+    <div class="row" style="margin-top:12px"><button class="btn btn-sm" id="run">▶ Run test packets</button></div>
+    <div class="ptest" id="ptest"></div><div id="rfb" aria-live="polite"></div>`;
+  const rulesEl=root.querySelector("#rules"), ptest=root.querySelector("#ptest"), fb=root.querySelector("#rfb");
+  RULES.forEach(r=>{ const el=block(`<div class="rule ${r.bad?"bad-rule":""}" data-id="${r.id}"><span class="chk">✓</span><span class="act ${r.act}">${r.act.toUpperCase()}</span><span class="desc">${r.desc}</span></div>`).firstElementChild;
+    el.addEventListener("click",()=>{ enabled[r.id]=!enabled[r.id]; el.classList.toggle("on",enabled[r.id]); }); rulesEl.appendChild(el); });
+  function evaluate(p){ for(const r of RULES){ if(enabled[r.id] && r.match(p)) return r.act==="allow"; } return false; }
+  root.querySelector("#run").addEventListener("click",()=>{
+    let allOk=true;
+    ptest.innerHTML=PKTS.map(p=>{ const pass=evaluate(p); const ok=pass===p.expect; if(!ok) allOk=false;
+      return `<div class="prow ${ok?"":"wrong"}"><span>${p.label}</span><span class="res ${pass?"pass":"drop"}">${pass?"ALLOWED":"DROPPED"}${ok?"":" ✗"}</span></div>`; }).join("");
+    if(allOk){ fb.innerHTML=`<div class="fb good">✅ Perfect rule set! Web is reachable, SSH is limited to the admin, and every attacker packet is dropped by the default-deny. That’s least-privilege, allow-listed firewalling.</div>`; api.complete(); }
+    else fb.innerHTML=`<div class="fb bad">Some packets went the wrong way (marked ✗). A rule like “SSH from anywhere” or “Allow ALL” is letting attackers through — turn those off and allow only what the mission needs.</div>`;
+  });
+}
+
+/* 3.2 stateful inspection */
+function a_stateful(root, api){
+  let mode="stateless", replyOk=false, atkBlocked=false, outbound=false;
+  root.innerHTML=`<div class="seg" id="m" role="group" aria-label="Firewall type"><button data-m="stateless" class="on">Stateless packet filter</button><button data-m="stateful">Stateful inspection</button></div>
+    <p class="small muted" style="margin-top:10px">An internal user browses the web (an <b>outbound</b> request). The reply must come back <b>inbound</b> — but so might an attacker’s unsolicited packet. Can the firewall tell them apart?</p>
+    <div class="row wrap"><button class="btn btn-sm" id="out">1 · Internal user browses (outbound :80)</button><button class="btn btn-sm" id="reply">2 · Web reply arrives (inbound)</button><button class="btn btn-sm btn-attack" id="atk">3 · Attacker’s unsolicited packet (inbound)</button></div>
+    <div id="stfb" aria-live="polite"></div>
+    <div class="tasks">
+      <div class="tk" id="t1"><span class="tick">✓</span>In stateful mode: let the legitimate reply through</div>
+      <div class="tk" id="t2"><span class="tick">✓</span>In stateful mode: block the attacker’s unsolicited packet</div>
+    </div>`;
+  const fb=root.querySelector("#stfb");
+  root.querySelectorAll("#m button").forEach(b=>b.addEventListener("click",()=>{ mode=b.dataset.m; root.querySelectorAll("#m button").forEach(x=>x.classList.toggle("on",x===b)); outbound=false; fb.innerHTML=`<div class="fb">Now using <b>${mode==="stateful"?"stateful inspection":"a stateless packet filter"}</b>.</div>`; }));
+  root.querySelector("#out").addEventListener("click",()=>{ outbound=true; fb.innerHTML=`<div class="fb">Outbound request sent. ${mode==="stateful"?"The firewall <b>remembers</b> this connection.":"A stateless filter keeps no memory of it."}</div>`; });
+  root.querySelector("#reply").addEventListener("click",()=>{
+    if(mode==="stateful"){ if(!outbound){ fb.innerHTML=`<div class="fb bad">No matching outbound request on record, so this ‘reply’ is dropped. Do step 1 first.</div>`; return; } replyOk=true; root.querySelector("#t1").classList.add("ok"); fb.innerHTML=`<div class="fb good">✅ Reply ALLOWED — it matches the remembered outbound connection.</div>`; chk(); }
+    else { fb.innerHTML=`<div class="fb bad">A stateless filter can’t link this to any request. To allow replies it must open all inbound high ports — which also lets attackers in. That’s the stateless dilemma.</div>`; }
+  });
+  root.querySelector("#atk").addEventListener("click",()=>{
+    if(mode==="stateful"){ atkBlocked=true; root.querySelector("#t2").classList.add("ok"); fb.innerHTML=`<div class="fb good">🛡️ Attacker packet DROPPED — it matches no remembered connection, so stateful inspection refuses it.</div>`; chk(); }
+    else { fb.innerHTML=`<div class="fb bad">With inbound ports opened to allow replies, the stateless filter lets this unsolicited attacker packet through too. It simply can’t tell the difference.</div>`; }
+  });
+  function chk(){ if(replyOk&&atkBlocked) api.complete(); }
+}
+
+/* 3.3 firewall types */
+function a_fwtypes(root, api){
+  const PF="Packet-filter (stateless)", SF="Stateful inspection", PX="Application / proxy", NAT="NAT gateway";
+  choiceQuiz(root,{ options:[PF,SF,PX,NAT], shuffle:true,
+    hint:"Header-only vs tracks-connections vs understands-content vs hides-addresses.",
+    items:[
+      {q:"Decides purely on packet headers (IP, port, protocol), with no memory of past packets.", a:PF, why:"A stateless packet filter — fast and simple but can’t track connections."},
+      {q:"Tracks the state of each connection so it can allow replies but block unsolicited inbound traffic.", a:SF, why:"Stateful inspection remembers connections."},
+      {q:"Understands the application protocol (HTTP, FTP) and relays requests on the client’s behalf, inspecting content.", a:PX, why:"An application-level proxy / gateway can filter by content but is slower."},
+      {q:"Hides many internal addresses behind one public IP, so outside hosts can’t address them directly.", a:NAT, why:"Network Address Translation adds a layer of concealment."}
+    ], onDone:api.complete });
+}
+
+/* 3.4 DMZ zones */
+function a_zones(root, api){
+  const servers=[
+    {id:"web", nm:"🌐 Public web server", correct:"dmz", why:"The public must reach it, so it belongs in the DMZ — exposed but separated from the internal network."},
+    {id:"mail", nm:"📧 Mail gateway", correct:"dmz", why:"It faces the internet too, so it also goes in the DMZ."},
+    {id:"db", nm:"🗄️ Customer database", correct:"internal", why:"Sensitive and should never face the internet — keep it internal, reachable only from the DMZ servers that need it."},
+    {id:"pc", nm:"💻 Employee workstations", correct:"internal", why:"Internal users belong in the trusted internal zone."}
+  ];
+  const choice={};
+  root.innerHTML=`<p class="small muted">A <b>DMZ</b> (demilitarised zone) sits between the internet and your internal network. Public-facing servers go in the DMZ; sensitive systems stay internal. Place each server.</p>
+    <div class="zonecols"><div class="zonecol internet"><h4>🌐 Internet</h4><p class="small muted" style="text-align:center">untrusted</p></div>
+      <div class="zonecol dmz"><h4>🟧 DMZ</h4><p class="small muted" style="text-align:center">public-facing</p></div>
+      <div class="zonecol internal"><h4>🟩 Internal</h4><p class="small muted" style="text-align:center">trusted</p></div></div>
+    <div class="srvlist" id="srv"></div>
+    <div class="row"><button class="btn btn-sm" id="check">Check placement</button></div><div id="zfb" aria-live="polite"></div>`;
+  const srv=root.querySelector("#srv"), fb=root.querySelector("#zfb");
+  servers.forEach(s=>{ const el=block(`<div class="srv"><div class="nm">${s.nm}</div><div class="seg" data-id="${s.id}"><button data-z="dmz">DMZ</button><button data-z="internal">Internal</button></div><div class="placed" style="display:none"></div></div>`).firstElementChild;
+    el.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>{ choice[s.id]=b.dataset.z; el.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x===b)); })); srv.appendChild(el); });
+  root.querySelector("#check").addEventListener("click",()=>{
+    const unplaced=servers.filter(s=>!choice[s.id]).length; if(unplaced){ fb.innerHTML=`<div class="fb">Place all ${servers.length} servers first (${unplaced} left).</div>`; return; }
+    let allOk=true; servers.forEach(s=>{ const el=[...srv.children][servers.indexOf(s)]; const ok=choice[s.id]===s.correct; if(!ok) allOk=false;
+      const p=el.querySelector(".placed"); p.style.display="block"; p.style.background=ok?"var(--good-soft)":"var(--bad-soft)"; p.style.color=ok?"var(--good)":"var(--bad)";
+      p.innerHTML=ok?`✓ ${s.correct==="dmz"?"DMZ":"Internal"} — ${s.why}`:`✗ Should be ${s.correct==="dmz"?"DMZ":"Internal"}. ${s.why}`; });
+    if(allOk){ fb.innerHTML=`<div class="fb good">✅ Correctly zoned! Public servers isolated in the DMZ, sensitive systems kept internal. If a DMZ server is breached, the attacker still can’t reach the internal network directly.</div>`; api.complete(); }
+    else fb.innerHTML=`<div class="fb bad">Some placements are wrong (marked ✗). Public-facing → DMZ; sensitive/internal-only → Internal.</div>`;
+  });
+}
+
+/* ============ modules ============ */
+const MODULES=[
+{ title:"Intrusion Detection: Anomaly versus Signature", short:"Detection approaches",
+  blurb:"How an IDS decides something is wrong — by matching known patterns or spotting the unusual.",
+  takeaways:[
+    "An IDS watches activity and raises alarms; it detects intrusions rather than blocking them at the door.",
+    "Signature detection matches known attack patterns: fast and accurate, but blind to new (zero-day) attacks.",
+    "Anomaly detection learns a baseline of normal and flags deviations: can catch new attacks, but raises false alarms.",
+    "Because real attacks are rare, even accurate detectors produce many false alarms — the base-rate problem."
+  ],
+  steps:[
+    { title:"What intrusion detection does",
+      concept:`<p>A firewall decides what may <b>enter</b>. An <b>intrusion detection system (IDS)</b> does something different: it <b>watches what’s happening</b> — on the network or on a host — and raises an alarm when activity looks like an attack. It’s the burglar alarm behind the locked door.</p>
+        <p>The whole skill is telling <b>normal</b> activity from an <b>intrusion</b>.</p>`,
+      key:"An IDS watches and alerts; it detects intrusions rather than blocking them outright.",
+      task:"Work the security console: judge each event as normal activity or an intrusion.",
+      hints:["One failed login then success is human; thousands of failures is a machine.","Touching many services fast, or acting at odd times from odd places, is suspicious."],
+      activity:a_console },
+    { title:"Signature detection",
+      concept:`<p><b>Signature (misuse) detection</b> keeps a database of known attack patterns — like antivirus for network traffic. If incoming activity matches a signature, it’s flagged. It’s fast and has few false alarms.</p>
+        <p>Its weakness: it can only catch what it already knows. A brand-new <b>zero-day</b> attack has no signature, so it slips through.</p>`,
+      key:"Signatures catch <b>known</b> attacks reliably, but miss anything new.",
+      task:"For each request, predict whether the signature IDS catches it or lets it through.",
+      hints:["If the request contains a pattern from the database, it’s caught.","A never-seen attack has no signature yet — watch what happens to it."],
+      activity:a_signature },
+    { title:"Anomaly detection",
+      concept:`<p><b>Anomaly detection</b> learns a <b>baseline</b> of normal behaviour, then flags anything that deviates too far. It can catch brand-new attacks that no signature covers — but it must choose a <b>threshold</b>, trading detection against false alarms.</p>
+        <div class="two"><div class="box"><h4>Threshold too low</h4>Catches every attack — but also flags harmless unusual behaviour (false alarms).</div>
+        <div class="box"><h4>Threshold too high</h4>Few false alarms — but misses real attacks.</div></div>`,
+      key:"Anomaly detection catches the new, but must balance detection against false alarms.",
+      task:"Move the threshold to catch attacks while keeping false alarms low.",
+      hints:["Push the threshold left to catch more attacks (detection up, but false alarms rise).","Find the sweet spot: over 90% detected and under 5% false alarms."],
+      activity:a_anomaly },
+    { title:"Choosing the right approach",
+      concept:`<p>Neither approach wins alone, so real systems combine them. Knowing which one catches a given attack sharpens your thinking.</p>
+        <div class="two"><div class="box"><h4>Signature</h4>Best for known threats; low false alarms; blind to zero-days.</div>
+        <div class="box"><h4>Anomaly</h4>Can catch the unknown; higher false alarms; needs training.</div></div>`,
+      key:"Signature for the known, anomaly for the unknown — use both.",
+      task:"Decide which approach would catch each case.",
+      hints:["A known pattern → signature. Something brand-new → anomaly.","A famous attack sent in an odd way can trip both."],
+      activity:a_which },
+    { title:"The reality of alerts",
+      concept:`<p>Here’s the uncomfortable truth defenders live with: real attacks are <b>rare</b>. When you watch millions of normal events, even a tiny false-alarm rate produces a flood of false alerts — often <b>more</b> false alarms than real detections. This is the <b>base-rate problem</b>, and it causes <b>alert fatigue</b>.</p>`,
+      key:"Rare attacks + many events = mostly false alarms, however good the detector.",
+      task:"Make attacks rare and watch how few of the alarms turn out to be real.",
+      hints:["Slide the real-attack rate down toward 1%.","Watch the share of alarms that are actually attacks collapse."],
+      activity:a_baserate }
+  ]
+},
+{ title:"Host-Based and Network-Based IDS", short:"HIDS & NIDS",
+  blurb:"Two vantage points: a sensor inside each host, and a sensor watching the whole network.",
+  takeaways:[
+    "A HIDS runs on a single host and sees its files, logs and processes — even decrypted traffic.",
+    "A NIDS watches traffic on the network and spots cross-host patterns, but is blind to host internals and encrypted payloads.",
+    "File integrity monitoring catches tampering by comparing current hashes to a trusted baseline.",
+    "A NIDS spots network-wide patterns like port scans; correlating HIDS and NIDS alerts reveals whole attacks."
+  ],
+  steps:[
+    { title:"Two places to watch",
+      concept:`<p>An IDS sensor can sit in two places:</p>
+        <div class="two"><div class="box"><h4>🛡️ Host-based (HIDS)</h4>Runs <b>on a host</b>. Sees that machine’s files, logs, processes and system calls — including data after it’s decrypted.</div>
+        <div class="box"><h4>🛰️ Network-based (NIDS)</h4>Watches <b>the network link</b>. Sees traffic to and from many hosts and cross-host patterns — but not inside a host, and not inside encrypted packets.</div></div>`,
+      key:"HIDS = deep view of one host · NIDS = broad view of the network.",
+      task:"Deploy the right sensors: a NIDS on the link and a HIDS on a host.",
+      hints:["Click the network link to place a NIDS.","Click a host to place a HIDS on it."],
+      activity:a_place },
+    { title:"Who sees what",
+      concept:`<p>Because they watch different things, HIDS and NIDS catch different attacks. A HIDS sees changes <b>inside</b> its host; a NIDS sees patterns <b>across</b> the network. Encrypted traffic is invisible to a NIDS but visible to the HIDS once it’s decrypted on the host.</p>`,
+      key:"Host internals and decrypted data → HIDS. Cross-host and traffic patterns → NIDS.",
+      task:"For each event, decide which sensor would catch it.",
+      hints:["File and log changes on one machine → HIDS.","Scans, floods and patterns across hosts → NIDS. Encrypted payloads hide from NIDS."],
+      activity:a_whosees },
+    { title:"File integrity monitoring (HIDS)",
+      concept:`<p>A key HIDS technique is <b>file integrity monitoring</b>. The HIDS records a trusted <b>hash</b> (fingerprint) of each important file. Later it re-hashes the files and compares. Any change — even a tiny, hidden one — changes the hash, so tampering is exposed.</p>`,
+      key:"Changed file → changed hash → the HIDS raises the alarm.",
+      task:"Let the attacker tamper with a file, then run the integrity check to catch it.",
+      hints:["Click the attacker button first to alter a file.","Then run the HIDS check and watch the mismatched hash get flagged."],
+      activity:a_integrity },
+    { title:"Catching a scan (NIDS)",
+      concept:`<p>A <b>NIDS</b> shines at <b>cross-host patterns</b>. A <b>port scan</b> — one source probing many ports to find an open door — is invisible to any single host but obvious to a network sensor watching all the connections at once.</p>`,
+      key:"Many ports from one source, fast = a port scan the NIDS flags.",
+      task:"Generate traffic and trigger the NIDS to detect a port scan.",
+      hints:["A few normal connections won’t trip it.","Run the port scan and watch the NIDS flag the probing source."],
+      activity:a_portscan },
+    { title:"Putting the alerts together",
+      concept:`<p>On their own, individual alerts are easy to dismiss. <b>Correlating</b> alerts from HIDS and NIDS — the job of a distributed IDS or <b>SIEM</b> — reveals the whole story: reconnaissance, then compromise, then data theft.</p>`,
+      key:"Correlated alerts tell the attack story that no single sensor shows.",
+      task:"Read a set of alerts and work out what they reveal together.",
+      hints:["Scan → new admin account → big outbound transfer tells a sequence.","Each sensor sees a piece; together they show the whole attack."],
+      activity:a_correlate }
+  ]
+},
+{ title:"Firewalls: Characteristics, Policy, Types and Zones", short:"Firewalls",
+  blurb:"The gatekeeper: a default-deny policy, ordered rules, firewall types and network zones.",
+  takeaways:[
+    "A firewall enforces a policy on traffic crossing a boundary; a default-deny policy is the safe starting point.",
+    "Rules are checked in order, allowing only what’s needed; everything else is denied by default (least privilege).",
+    "Stateful inspection tracks connections, so it can allow replies while blocking unsolicited inbound traffic.",
+    "Firewall types include packet filters, stateful inspection, application proxies and NAT.",
+    "A DMZ isolates public-facing servers from the trusted internal network."
+  ],
+  steps:[
+    { title:"The default policy",
+      concept:`<p>A <b>firewall</b> controls what traffic may cross a boundary, based on a <b>policy</b>. The most important choice is the <b>default</b>: what happens to traffic no rule mentions?</p>
+        <div class="two"><div class="box"><h4>❌ Default allow</h4>Everything passes unless specifically blocked. You can never list every bad thing — gaps are inevitable.</div>
+        <div class="box"><h4>✅ Default deny</h4>Nothing passes unless specifically allowed. Safe by default; you add only what you need.</div></div>`,
+      key:"Start from <b>default deny</b> and allow only what’s needed.",
+      task:"Try both default policies and send a legit request and an attacker probe.",
+      hints:["With default-allow, send the attacker probe and watch it get in.","Switch to default-deny and see unlisted traffic blocked."],
+      activity:a_default },
+    { title:"Building the rules",
+      concept:`<p>With default-deny set, you add <b>rules</b> that allow exactly what’s needed. Rules are checked <b>in order</b>, top to bottom; the first match wins; anything unmatched hits the final <b>deny</b>. The art is allowing the needed traffic without opening a hole.</p>`,
+      key:"Allow only what’s required; the implicit deny catches the rest.",
+      task:"Turn on the right rules so legit traffic passes and every attacker packet is dropped.",
+      hints:["You need: web to the server, and SSH only from the admin.","A rule like “SSH from anywhere” or “Allow ALL” lets attackers in — leave those off."],
+      activity:a_rules },
+    { title:"Stateful inspection",
+      concept:`<p>A <b>stateless packet filter</b> judges each packet alone, with no memory. That makes replies awkward: to let a web reply back in, it must open inbound ports — which attackers can use too.</p>
+        <p><b>Stateful inspection</b> remembers each connection. It allows the reply that matches an outbound request, while dropping unsolicited inbound packets. Much safer.</p>`,
+      key:"Stateful firewalls remember connections, so replies are allowed but unsolicited traffic is blocked.",
+      task:"Compare the two: in stateful mode, let the reply in and block the attacker.",
+      hints:["Switch to stateful, do the outbound browse first, then the reply.","Then send the attacker’s unsolicited packet and watch it get dropped."],
+      activity:a_stateful },
+    { title:"Types of firewall",
+      concept:`<p>Firewalls come in several forms, often combined:</p>
+        <div class="defn">
+          <div class="d"><b>Packet filter</b> — decides on headers only; stateless.</div>
+          <div class="d"><b>Stateful inspection</b> — tracks connections.</div>
+          <div class="d"><b>Application / proxy</b> — understands the protocol and inspects content, relaying on the client’s behalf.</div>
+          <div class="d"><b>NAT</b> — hides internal addresses behind one public IP.</div>
+        </div>`,
+      key:"Header-only, connection-tracking, content-aware, address-hiding — different tools for different jobs.",
+      task:"Match each description to the firewall type.",
+      hints:["No memory = packet filter; tracks connections = stateful.","Understands content = proxy; hides addresses = NAT."],
+      activity:a_fwtypes },
+    { title:"Zones and the DMZ",
+      concept:`<p>Firewalls also divide a network into <b>zones</b> of different trust. A <b>DMZ</b> (demilitarised zone) sits between the internet and the internal network: public-facing servers live there, exposed but <b>isolated</b>. If a DMZ server is breached, the attacker still can’t reach the trusted internal zone directly.</p>`,
+      key:"Public servers → DMZ; sensitive systems → internal. Zones contain a breach.",
+      task:"Place each server in the right zone: DMZ or internal.",
+      hints:["Anything the public must reach → DMZ.","Sensitive, internal-only systems → internal zone."],
+      activity:a_zones }
+  ]
+}
+];
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+  {topic:"Lesson 1", q:"The main job of an intrusion detection system (IDS) is to…", o:["Block all traffic at the boundary","Watch activity and raise an alarm when it looks like an attack","Encrypt the database","Replace passwords"], a:1, ex:"An IDS detects and alerts; it watches what happens rather than blocking at the door."},
+  {topic:"Lesson 1", q:"Signature-based detection works by…", o:["Matching activity against known attack patterns","Learning what’s normal","Guessing randomly","Encrypting packets"], a:0, ex:"Signatures are known-attack fingerprints — fast but blind to new attacks."},
+  {topic:"Lesson 1", q:"A key weakness of signature detection is that it…", o:["Is very slow","Cannot catch brand-new (zero-day) attacks","Needs no database","Blocks all traffic"], a:1, ex:"With no signature yet, a zero-day slips through."},
+  {topic:"Lesson 1", q:"Anomaly-based detection flags activity that…", o:["Matches a signature","Deviates too far from a learned baseline of normal","Comes from inside","Uses encryption"], a:1, ex:"It learns normal behaviour and alerts on deviations — catching the unknown but risking false alarms."},
+  {topic:"Lesson 1", q:"Why do IDSs often produce mostly false alarms in practice?", o:["They are always broken","Real attacks are rare, so even a small false-alarm rate outnumbers them","Attackers turn them off","They only run once"], a:1, ex:"The base-rate problem: rare attacks + many events = many false positives."},
+  {topic:"Lesson 2", q:"A host-based IDS (HIDS) is best at detecting…", o:["Network-wide port scans","Changes to files, logs and processes on its own host","Traffic floods across the network","Nothing at all"], a:1, ex:"A HIDS sees inside one host — files, logs, processes, even decrypted data."},
+  {topic:"Lesson 2", q:"A network-based IDS (NIDS) is blind to…", o:["Traffic patterns across hosts","The contents of encrypted packets","Port scans","Floods"], a:1, ex:"It can’t read encrypted payloads, and can’t see inside a host."},
+  {topic:"Lesson 2", q:"File integrity monitoring detects tampering by…", o:["Comparing each file’s current hash to a trusted baseline hash","Blocking the network","Deleting the file","Encrypting the disk"], a:0, ex:"A changed file produces a changed hash, which the HIDS flags."},
+  {topic:"Lesson 2", q:"One source connecting to many ports quickly is a sign of…", o:["A port scan","A backup job","A normal web visit","A firewall rule"], a:0, ex:"Probing many ports to find an open service is a port scan a NIDS can catch."},
+  {topic:"Lesson 2", q:"Correlating alerts from HIDS and NIDS helps because…", o:["Each sees only part of the picture; together they reveal the whole attack","It uses less memory","One of them is always wrong","It encrypts the alerts"], a:0, ex:"Combining host and network views reconstructs the full attack story."},
+  {topic:"Lesson 3", q:"The safest default firewall policy is…", o:["Allow everything not explicitly blocked","Deny everything not explicitly allowed","Allow only at night","Block the whole internet"], a:1, ex:"Default-deny (allow-listing) is safe: only needed traffic is permitted."},
+  {topic:"Lesson 3", q:"Firewall rules are evaluated…", o:["In random order","In order, top to bottom, first match wins","Only the last rule matters","All at once with no order"], a:1, ex:"Order matters; the first matching rule decides, and unmatched traffic hits the default deny."},
+  {topic:"Lesson 3", q:"Stateful inspection is better than a stateless filter because it…", o:["Tracks connections, allowing replies while blocking unsolicited inbound traffic","Is always faster","Needs no rules","Encrypts everything"], a:0, ex:"Remembering connections lets it tell a legitimate reply from an unsolicited packet."},
+  {topic:"Lesson 3", q:"A firewall that understands the application protocol and inspects content is a…", o:["Packet filter","Application / proxy firewall","NAT gateway","Hub"], a:1, ex:"Application-level proxies can filter by content, acting on the client’s behalf."},
+  {topic:"Lesson 3", q:"A DMZ is used to…", o:["Store passwords","Isolate public-facing servers from the trusted internal network","Speed up the CPU","Replace the IDS"], a:1, ex:"Public servers sit in the DMZ so a breach there can’t directly reach the internal network."}
+];
+function gradeOf(sc){ if(sc>=13) return {g:"A",t:"Excellent"}; if(sc>=11) return {g:"B",t:"Very good"}; if(sc>=9) return {g:"C",t:"Pass"}; return {g:"–",t:"Needs revision"}; }
+
+/* ---------- shell ---------- */
+function renderTop(){
+  if(mode==="welcome"||!S.name){ topbar.innerHTML=`<div class="topbar-in"><div class="brand"><span class="brand-ic">🛡️</span><span class="brand-t">Activity Lab<small>Intrusion Detection &amp; Firewall</small></span></div></div>`; return; }
+  const n=doneCount(), inQuiz=mode==="quiz";
+  const initials=S.name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("").toUpperCase();
+  topbar.innerHTML=`<div class="topbar-in"><button class="brand" id="tbHome" ${inQuiz?"disabled":""} aria-label="Map"><span class="brand-ic">🛡️</span><span class="brand-t">Activity Lab<small>Intrusion Detection &amp; Firewall</small></span></button>
+    <div class="tb-right"><span class="tb-steps"><b>${n}</b>/${TOTAL} done</span><div class="student"><b>${esc(S.name.split(" ")[0])}</b><small>${esc(S.roll)}</small></div>
+    ${inQuiz?`<span class="pill on">Quiz</span>`:`<button class="btn btn-quiet btn-sm" id="tbMap">Map</button>`}</div></div>`;
+  const home=document.getElementById("tbHome"), map=document.getElementById("tbMap");
+  if(home&&!inQuiz) home.addEventListener("click",()=>go(screenOverview));
+  if(map) map.addEventListener("click",()=>go(screenOverview));
+}
+function go(fn,...a){ fn(...a); renderTop(); try{ window.scrollTo(0,0); }catch(e){} }
+
+function screenWelcome(){
+  mode="welcome"; const has=!!S.name;
+  app.innerHTML=`<section class="screen stack">
+    <div class="bare"><div class="eyebrow">Interactive lab · beginner</div><h1>Intrusion Detection &amp; Firewall</h1>
+      <p class="lead">The two pillars of network defence: firewalls that control what may pass, and intrusion detection systems that watch what does pass and raise the alarm.</p>
+      <ul class="facts"><li>3 lessons · 15 hands-on simulations</li><li>Run a SOC console, tune detectors, build firewall rules and design a DMZ</li><li>Free hints at every step</li><li>Final quiz worth 15 marks</li></ul></div>
+    <div class="card" id="who"></div></section>`;
+  const who=document.getElementById("who");
+  if(has){ who.innerHTML=`<h3>Welcome back, ${esc(S.name.split(" ")[0])}</h3><p class="muted">Roll no. ${esc(S.roll)} · ${doneCount()}/${TOTAL} done${S.results.length?` · quiz ${S.results.length}×`:""}.</p>
+    <div class="row wrap"><button class="btn" id="cont">Continue</button><button class="btn btn-quiet" id="newst">Different student</button></div>`;
+    document.getElementById("cont").addEventListener("click",()=>go(screenOverview));
+    document.getElementById("newst").addEventListener("click",()=>{ S=fresh(); save(); go(screenWelcome); });
+  } else { who.innerHTML=`<h3>Before you begin</h3><p class="muted small">Your name and roll number appear on your result card.</p>
+    <div class="who-grid"><div class="field"><label for="nm">Full name</label><input class="input" id="nm" maxlength="60" autocomplete="name" placeholder="e.g. Hiba Imran"></div>
+    <div class="field"><label for="rl">Roll number</label><input class="input" id="rl" maxlength="30" autocomplete="off" placeholder="e.g. 23CS045"></div></div>
+    <div class="err" id="err" aria-live="polite"></div><button class="btn" id="startBtn" style="margin-top:4px">Start</button>`;
+    const nm=document.getElementById("nm"), rl=document.getElementById("rl"), err=document.getElementById("err");
+    function start(){ const n=nm.value.trim().replace(/\s+/g," "), r=rl.value.trim();
+      if(n.length<2){ err.textContent="Enter your full name."; nm.focus(); return; }
+      if(r.length<2){ err.textContent="Enter your roll number."; rl.focus(); return; }
+      if(!/^[A-Za-z0-9\-\/_. ]+$/.test(r)){ err.textContent="Letters, numbers, dashes, slashes and dots only."; rl.focus(); return; }
+      S=fresh(); S.name=n; S.roll=r; save(); go(screenOverview); }
+    document.getElementById("startBtn").addEventListener("click",start);
+    [nm,rl].forEach(x=>x.addEventListener("keydown",e=>{ if(e.key==="Enter") start(); })); nm.focus();
+  }
+}
+function modInfo(m){ const cnt=[0,1,2,3,4].filter(i=>S.done[m*5+i]).length; const unlocked=m===0||S.maxPos>=m*5-1; const started=S.maxPos>=m*5;
+  let target=m*5; for(let i=0;i<5;i++){ if(!S.done[m*5+i]){ target=m*5+i; break; } } if(target>S.maxPos+1) target=Math.max(m*5,Math.min(S.maxPos,m*5+4)); return {cnt,unlocked,started,target}; }
+
+function screenOverview(){
+  mode="map"; const quizOpen=S.maxPos>=14, res=S.results, best=res.length?Math.max(...res.map(r=>r.score)):null;
+  app.innerHTML=`<section class="screen stack">
+    <div class="bare"><div class="eyebrow">Overview</div><h2>What this is about</h2>
+      <p>Two defences guard every network. The <b>firewall</b> is the gate: it decides what traffic may cross. The <b>intrusion detection system</b> is the watchtower: it studies what gets through and sounds the alarm on anything that looks like an attack. Together they form the backbone of network defence.</p>
+      <p>You’ll <b>operate both</b> here: triage alerts at a security console, tune a detector’s threshold, deploy sensors, catch a port scan, build a firewall rule table and design a DMZ — all simulated safely.</p></div>
+    <div class="card"><h3>By the end, you can…</h3><ul class="obj">
+      <li>Explain what an IDS does and how it differs from a firewall.</li>
+      <li>Compare signature and anomaly detection and their trade-offs.</li>
+      <li>Explain the base-rate problem and alert fatigue.</li>
+      <li>Compare HIDS and NIDS and say which catches what.</li>
+      <li>Explain file integrity monitoring and port-scan detection.</li>
+      <li>Apply default-deny, build ordered firewall rules, and explain stateful inspection, firewall types and the DMZ.</li></ul></div>
+    <div class="bare"><h3>Lessons</h3><div class="path" id="path"></div></div>
+    <div class="card"><h3>Marking</h3>
+      <table class="marks"><thead><tr><th>Part</th><th>Detail</th><th>Marks</th></tr></thead><tbody>
+        <tr><td>Activities</td><td>15 hands-on simulations</td><td>Shown on your card</td></tr>
+        <tr><td>Final quiz</td><td>15 questions, 1 mark each</td><td>15 marks</td></tr>
+        <tr><td>Pass</td><td>9 / 15 · A 13–15 · B 11–12 · C 9–10</td><td>—</td></tr></tbody></table>
+      <p class="small muted" style="margin-top:8px">The quiz unlocks at the end of Lesson 3 — shuffled, no hints, answers lock on submit.</p></div></section>`;
+  const path=document.getElementById("path");
+  MODULES.forEach((mod,m)=>{ const info=modInfo(m); const label=!info.unlocked?"Locked":info.cnt===5?"Review":info.started?"Continue":"Start";
+    const c=block(`<div class="pcard ${info.unlocked?"":"locked"}"><div class="pnum">${m+1}</div><div><div class="ptitle">${mod.title}</div><div class="pmeta">${mod.blurb} · ${info.cnt}/5 done</div></div>
+      <button class="btn ${info.cnt===5?"btn-ghost":""} btn-sm" ${info.unlocked?"":"disabled"}>${label}</button></div>`).firstElementChild;
+    c.querySelector("button").addEventListener("click",()=>go(screenStep,info.target)); path.appendChild(c); });
+  const q=block(`<div class="pcard quiz ${quizOpen?"":"locked"}"><div class="pnum">★</div><div><div class="ptitle">Final quiz</div><div class="pmeta">15 questions · 1 mark each${res.length?` · best ${best}/15`:""}</div></div>
+    <button class="btn btn-sm" ${quizOpen?"":"disabled"}>${quizOpen?(res.length?"Retake":"Start"):"Locked"}</button></div>`).firstElementChild;
+  q.querySelector("button").addEventListener("click",()=>go(screenQuizIntro)); path.appendChild(q);
+}
+
+function screenStep(pos){
+  mode="step"; const m=Math.floor(pos/5), s=pos%5, mod=MODULES[m], st=mod.steps[s];
+  if(pos>S.maxPos){ S.maxPos=pos; save(); }
+  const done=!!S.done[pos]; const nextLabel=d=>d?(s<4?"Continue":"Finish lesson"):"Skip";
+  app.innerHTML=`<section class="screen stack">
+    <div class="bare"><div class="crumbs"><span class="pill">Lesson ${m+1}</span><span>${mod.short}</span><span>·</span><span>Step ${s+1} of 5</span></div>
+      <h2>${st.title}</h2><div class="rail" style="margin-top:10px"><i style="width:${(s+1)/5*100}%"></i></div></div>
+    <div class="bare">${st.concept}<div class="key">🔑 <b>Key idea:</b> ${st.key}</div></div>
+    <div class="actwrap ${done?"done":""}" id="act"><div class="act-top"><span class="act-label">Simulation</span><span class="badge">✓ Completed</span></div>
+      <p class="task">${st.task}</p><div id="body"></div>
+      <div class="hintarea"><button class="btn btn-quiet btn-sm" id="hintBtn">💡 Hint</button><div id="hints"></div></div></div>
+    <div class="stepnav"><button class="btn btn-quiet btn-sm" id="back">◂ Back</button><div class="dots" id="dots" aria-hidden="true"></div>
+      <button class="btn btn-sm ${done?"":"btn-ghost"}" id="next">${nextLabel(done)} ▸</button></div></section>`;
+  const act=document.getElementById("act"), nextBtn=document.getElementById("next");
+  function dots(){ document.getElementById("dots").innerHTML=[0,1,2,3,4].map(i=>`<i class="${i===s?"on":""} ${S.done[m*5+i]?"ok":""}"></i>`).join(""); }
+  dots();
+  const api={ complete(){ if(!S.done[pos]){ S.done[pos]=true; save(); } act.classList.add("done"); nextBtn.classList.remove("btn-ghost"); nextBtn.textContent=nextLabel(true)+" ▸"; dots(); renderTop(); } };
+  let hi=0; const hb=document.getElementById("hintBtn"), hbox=document.getElementById("hints");
+  hb.addEventListener("click",()=>{ if(hi>=st.hints.length) return; hbox.appendChild(block(`<div class="hintbox"><b>Hint ${hi+1}/${st.hints.length}:</b> ${st.hints[hi]}</div>`).firstElementChild); hi++; if(hi>=st.hints.length){ hb.disabled=true; hb.textContent="No more hints"; } });
+  try{ st.activity(document.getElementById("body"),api); }catch(e){ console.error(e); }
+  document.getElementById("back").addEventListener("click",()=>go(s>0?()=>screenStep(pos-1):screenOverview));
+  nextBtn.addEventListener("click",()=>go(s<4?()=>screenStep(pos+1):()=>screenModuleDone(m)));
+}
+function screenModuleDone(m){
+  mode="done"; const mod=MODULES[m], cnt=[0,1,2,3,4].filter(i=>S.done[m*5+i]).length;
+  app.innerHTML=`<section class="screen stack"><div class="bare done-head"><div class="check">✓</div><h2>Lesson ${m+1} complete</h2><p class="muted">${mod.title} · ${cnt} of 5 simulations</p></div>
+    <div class="card"><h3>What you learned</h3><ul class="take">${mod.takeaways.map(t=>`<li>${t}</li>`).join("")}</ul></div>
+    ${cnt<5?`<p class="muted small center">You skipped ${5-cnt}. You can return any time from the map.</p>`:""}
+    <div class="row wrap center"><button class="btn btn-quiet btn-sm" id="toMap">Map</button><button class="btn btn-sm" id="nextMod">${m<2?`Start Lesson ${m+2}`:"Final quiz"} ▸</button></div></section>`;
+  document.getElementById("toMap").addEventListener("click",()=>go(screenOverview));
+  document.getElementById("nextMod").addEventListener("click",()=>go(m<2?()=>screenStep((m+1)*5):screenQuizIntro));
+}
+let Q=null;
+function screenQuizIntro(){ mode="map"; const n=doneCount();
+  app.innerHTML=`<section class="screen card"><div class="eyebrow">Final quiz</div><h2>Ready, ${esc(S.name.split(" ")[0])}?</h2>
+    <table class="marks" style="margin:12px 0"><tbody><tr><th>Questions</th><td>15, from all three lessons</td></tr><tr><th>Marks</th><td>1 each — 15 total</td></tr>
+      <tr><th>Pass</th><td>9 / 15</td></tr><tr><th>Rules</th><td>No hints · shuffled · answers lock on submit</td></tr>
+      <tr><th>Attempt</th><td>#${S.results.length+1}${S.results.length?` · first was ${S.results[0].score}/15`:""}</td></tr></tbody></table>
+    ${n<TOTAL?`<div class="fb">You’ve done ${n}/${TOTAL} simulations. Finishing them first will help.</div>`:`<div class="fb good">All 15 simulations done — well prepared.</div>`}
+    <div class="row wrap" style="margin-top:14px"><button class="btn btn-quiet btn-sm" id="qback">Map</button><button class="btn btn-sm" id="qgo">Start ▸</button></div></section>`;
+  document.getElementById("qback").addEventListener("click",()=>go(screenOverview));
+  document.getElementById("qgo").addEventListener("click",()=>{ Q={ qs:shuffle(QUIZ).map(q=>Object.assign({},q,{order:shuffle(q.o.map((_,i)=>i))})), i:0, score:0, answers:[], start:Date.now() }; go(screenQuestion); });
+}
+function screenQuestion(){ mode="quiz"; const q=Q.qs[Q.i]; let sel=null, locked=false;
+  app.innerHTML=`<section class="screen card"><div class="row between"><span class="pill">Q${Q.i+1}/${Q.qs.length}</span><span class="pill">Score ${Q.score}</span></div>
+    <div class="rail" style="margin-top:10px"><i style="width:${Q.i/Q.qs.length*100}%"></i></div>
+    <p class="small muted" style="margin:12px 0 0">${q.topic}</p><h3 class="qprompt">${q.q}</h3>
+    <div class="qopts">${q.order.map((oi,k)=>`<button class="qopt" data-oi="${oi}"><span class="ltr">${"ABCD"[k]}</span><span>${q.o[oi]}</span></button>`).join("")}</div>
+    <div id="qfb" aria-live="polite"></div><div class="row end" style="margin-top:14px"><button class="btn btn-sm" id="qsub" disabled>Submit</button></div></section>`;
+  const sub=document.getElementById("qsub"), btns=app.querySelectorAll(".qopt");
+  btns.forEach(b=>b.addEventListener("click",()=>{ if(locked) return; btns.forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); sel=+b.dataset.oi; sub.disabled=false; }));
+  sub.addEventListener("click",()=>{ if(!locked){ if(sel===null) return; locked=true; const ok=sel===q.a; if(ok) Q.score++;
+      Q.answers.push({q:q.q,chosen:q.o[sel],correct:q.o[q.a],ok,ex:q.ex});
+      btns.forEach(x=>{ x.disabled=true; const oi=+x.dataset.oi; if(oi===q.a) x.classList.add("right"); else if(oi===sel) x.classList.add("wrong"); x.classList.remove("sel"); });
+      document.getElementById("qfb").innerHTML=`<div class="fb ${ok?"good":"bad"}"><b>${ok?"Correct. +1":"Not quite."}</b> ${q.ex}</div>`;
+      sub.textContent=Q.i+1<Q.qs.length?"Next ▸":"See result";
+    } else if(Q.i+1<Q.qs.length){ Q.i++; go(screenQuestion); } else finishQuiz(); });
+}
+function finishQuiz(){ const r={ score:Q.score, total:15, pct:Math.round(Q.score/15*100), ms:Date.now()-Q.start, date:new Date().toISOString(), attempt:S.results.length+1, activities:doneCount() }; S.results.push(r); save(); go(screenResult,r,Q.answers); }
+function screenResult(r,answers){ mode="result"; const g=gradeOf(r.score), pass=r.score>=9;
+  const mins=Math.floor(r.ms/60000), secs=Math.round((r.ms%60000)/1000), when=new Date(r.date).toLocaleString();
+  const text=`Intrusion Detection & Firewall — Activity Result
+Name: ${S.name}
+Roll no.: ${S.roll}
+Quiz: ${r.score}/15 (${r.pct}%) — Grade ${g.g} (${g.t}) — ${pass?"PASS":"Needs revision"}
+Activities: ${r.activities}/15
+Attempt: ${r.attempt} · ${mins}m ${secs}s · ${when}`;
+  app.innerHTML=`<section class="screen stack"><div class="card"><div class="row between"><span class="eyebrow" style="margin:0">Result</span><span class="pill">Attempt ${r.attempt}</span></div>
+      <h2 style="margin:8px 0 14px">Intrusion Detection &amp; Firewall result</h2>
+      <div class="ring" style="--p:${r.pct}"><div><div><b>${r.score}</b><span>of 15</span></div></div></div>
+      <div class="kv"><div><small>Student</small><b>${esc(S.name)}</b></div><div><small>Roll no.</small><b>${esc(S.roll)}</b></div>
+        <div><small>Grade</small><b>${g.g} — ${g.t}</b></div><div><small>Status</small><b class="${pass?"status-pass":"status-fail"}">${pass?"Pass":"Needs revision"}</b></div>
+        <div><small>Activities</small><b>${r.activities} / 15</b></div><div><small>Time</small><b>${mins}m ${secs}s</b></div></div>
+      <p class="small muted" style="margin-top:12px">Screenshot this card or copy the text for your teacher.</p>
+      <div class="row wrap"><button class="btn btn-sm" id="copy">Copy result</button><button class="btn btn-quiet btn-sm" id="retake">Retake</button><button class="btn btn-quiet btn-sm" id="rmap">Map</button></div><div id="ca"></div></div>
+    <div class="card"><h3>Review</h3><ul class="review">${answers.map(a=>`<li><b>${a.q}</b><br><span class="${a.ok?"yes":"no"}">${a.ok?"✓":"✗"} Your answer: ${a.chosen}</span>${a.ok?"":`<br><span class="yes">✓ Correct: ${a.correct}</span>`}<div class="small muted" style="margin-top:3px">${a.ex}</div></li>`).join("")}</ul></div></section>`;
+  const copyBtn=document.getElementById("copy");
+  copyBtn.addEventListener("click",()=>{ const fb=()=>{ const ca=document.getElementById("ca"); ca.innerHTML=`<textarea class="copybox" readonly></textarea>`; const ta=ca.querySelector("textarea"); ta.value=text; ta.focus(); ta.select(); };
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(()=>{ copyBtn.textContent="Copied"; setTimeout(()=>copyBtn.textContent="Copy result",2000); }).catch(fb); else fb(); }catch(e){ fb(); } });
+  document.getElementById("retake").addEventListener("click",()=>go(screenQuizIntro));
+  document.getElementById("rmap").addEventListener("click",()=>go(screenOverview));
+}
+
+load(); go(screenWelcome);
+})();
+</script>
+</body>
+</html>
